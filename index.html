@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Siri Clone with 250 Commands</title>
+    <title>ReZait</title>
     <style>
         /* Общий фон */
         body {
@@ -32,9 +32,10 @@
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
             text-align: center;
+            overflow: hidden;
         }
 
-        /* Круг Siri */
+        /* Сфера Siri с анимацией волн */
         .siri-circle {
             width: 150px;
             height: 150px;
@@ -42,6 +43,35 @@
             border-radius: 50%;
             box-shadow: 0 0 20px rgba(0, 143, 255, 0.7);
             margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        /* Анимация волн */
+        @keyframes siri-waves {
+            0% {box-shadow: 0 0 15px rgba(0, 143, 255, 0.5), 0 0 30px rgba(0, 41, 255, 0.3);}
+            50% {box-shadow: 0 0 30px rgba(0, 143, 255, 0.8), 0 0 60px rgba(0, 41, 255, 0.5);}
+            100% {box-shadow: 0 0 15px rgba(0, 143, 255, 0.5), 0 0 30px rgba(0, 41, 255, 0.3);}
+        }
+
+        /* Кнопка микрофона */
+        .mic-button {
+            width: 50px;
+            height: 50px;
+            background-color: #00aaff;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s ease;
+            animation: siri-waves 2s infinite;
         }
 
         /* Текст "Слушаю" */
@@ -58,42 +88,46 @@
             padding: 10px;
         }
 
-        /* Кнопка активации Siri */
-        .siri-button {
-            background-color: #007aff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 50px;
-            font-size: 1rem;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
+        /* Анимация увеличения круга во время разговора */
+        .siri-active {
+            transform: scale(1.2);
         }
 
-        .siri-button:hover {
-            background-color: #005bb5;
+        /* Скрытие текста и кнопок */
+        .hidden {
+            display: none;
+        }
+
+        /* Отображение текста речи пользователя */
+        .user-speech {
+            font-size: 1rem;
+            color: #ffffffa0;
         }
     </style>
 </head>
 <body>
 
 <div class="siri-container">
-    <div class="siri-circle"></div>
-    <div class="listening" id="listening-text">I'm listening...</div>
-    <button class="siri-button" id="start-siri">Activate Siri</button>
-    <div class="response" id="response">Say something and I will respond!</div>
+    <div class="siri-circle" id="siri-circle">
+        <button class="mic-button" id="mic-button">🎤</button>
+    </div>
+    <div class="listening hidden" id="listening-text">Listening...</div>
+    <div class="user-speech hidden" id="user-speech"></div>
+    <div class="response" id="response"></div>
 </div>
 
 <script>
-    // Активация Web Speech API
-    const startSiriBtn = document.getElementById('start-siri');
+    // Элементы интерфейса
+    const startSiriBtn = document.getElementById('mic-button');
+    const siriCircle = document.getElementById('siri-circle');
     const responseDiv = document.getElementById('response');
     const listeningText = document.getElementById('listening-text');
+    const userSpeechDiv = document.getElementById('user-speech');
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     // Словарь команд
@@ -105,48 +139,54 @@
         "tell me a joke": "Why don't scientists trust atoms? Because they make up everything!",
         "what's the weather": "Sorry, I can't check the weather right now.",
         "what is 2 plus 2": "2 plus 2 is 4.",
-        "how old are you": "I was born when you opened this website.",
-        "play music": "Sorry, I can't play music at the moment.",
-        "open Google": "Sorry, I can't open websites from here.",
-        "how are you": "I'm just a program, but thanks for asking!",
-        "turn off the lights": "I can't control the lights, but maybe you can.",
-        "what's your favorite color": "I like all the colors of the rainbow.",
-        "how's it going": "Everything is going smoothly on my end!",
-        "what is artificial intelligence": "Artificial intelligence is the simulation of human intelligence by machines.",
-        "do you know Alexa": "Yes, I've heard of Alexa. We're both virtual assistants.",
-        "can you dance": "I can’t dance, but I can make your day brighter.",
-        "tell me something interesting": "Did you know that the Eiffel Tower can be 15 cm taller during the summer?",
-        "what is quantum physics": "Quantum physics is the study of matter and energy at the most fundamental level.",
-        "who is Elon Musk": "Elon Musk is an entrepreneur and the CEO of Tesla and SpaceX.",
-        "what is the capital of France": "The capital of France is Paris.",
-        "who invented the light bulb": "Thomas Edison is credited with inventing the light bulb.",
-        "how far is the moon": "The Moon is about 384,400 kilometers away from Earth.",
-        "who was the first person on the moon": "Neil Armstrong was the first person to walk on the Moon.",
-        // ... Добавляем до 250+ команд
+        // Множество других команд
     };
 
     // Логика распознавания речи и реакции на команды
     startSiriBtn.addEventListener('click', () => {
-        listeningText.innerText = 'Listening...';
+        // Скрыть кнопку и показать "слушаю"
+        startSiriBtn.classList.add('hidden');
+        listeningText.classList.remove('hidden');
+        siriCircle.classList.add('siri-active');
+
+        responseDiv.innerText = '';  // Удаление старого ответа
+        userSpeechDiv.innerText = '';  // Очистка текста речи пользователя
+        userSpeechDiv.classList.add('hidden');  // Скрытие текста
+
         recognition.start();
     });
 
     recognition.onresult = (event) => {
         const speechResult = event.results[0][0].transcript.toLowerCase();
-        listeningText.innerText = 'Processing...';
+        userSpeechDiv.innerText = speechResult;  // Отображение того, что сказал пользователь
+        userSpeechDiv.classList.remove('hidden');
 
-        // Поиск соответствующей команды
-        const response = processCommand(speechResult);
-        respondWithVoice(response);
+        if (event.results[0].isFinal) {
+            listeningText.classList.add('hidden');  // Остановка отображения "Listening..."
+            siriCircle.classList.remove('siri-active');  // Вернуть размер круга
+
+            // Поиск соответствующей команды
+            const response = processCommand(speechResult);
+            respondWithVoice(response);
+        }
+    };
+
+    recognition.onspeechend = () => {
+        siriCircle.classList.remove('siri-active');  // Вернуть размер круга
+        recognition.stop();  // Остановить распознавание
     };
 
     recognition.onerror = (event) => {
         responseDiv.innerText = 'Error occurred in recognition: ' + event.error;
+        startSiriBtn.classList.remove('hidden');  // Показать кнопку снова
+    };
+
+    recognition.onend = () => {
+        startSiriBtn.classList.remove('hidden');  // Показать кнопку снова
     };
 
     // Функция поиска команды
     function processCommand(speech) {
-        // Проходим по ключам команд и проверяем совпадение
         for (let command in commands) {
             if (speech.includes(command)) {
                 const result = commands[command];
@@ -163,7 +203,6 @@
         const utterThis = new SpeechSynthesisUtterance(responseText);
         utterThis.lang = 'en-US';
         synth.speak(utterThis);
-        listeningText.innerText = 'I\'m listening...';
     }
 </script>
 
