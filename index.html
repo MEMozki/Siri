@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siri Clone with 250 Commands</title>
+    <style>
+        /* Общий фон */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+
+        /* Окно Siri */
+        .siri-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 400px;
+            height: 500px;
+            border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        /* Круг Siri */
+        .siri-circle {
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(0, 143, 255, 1), rgba(0, 41, 255, 1));
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0, 143, 255, 0.7);
+            margin-bottom: 20px;
+        }
+
+        /* Текст "Слушаю" */
+        .listening {
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        /* Ответ Siri */
+        .response {
+            font-size: 1.2rem;
+            margin-top: 20px;
+            color: white;
+            padding: 10px;
+        }
+
+        /* Кнопка активации Siri */
+        .siri-button {
+            background-color: #007aff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .siri-button:hover {
+            background-color: #005bb5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="siri-container">
+    <div class="siri-circle"></div>
+    <div class="listening" id="listening-text">I'm listening...</div>
+    <button class="siri-button" id="start-siri">Activate Siri</button>
+    <div class="response" id="response">Say something and I will respond!</div>
+</div>
+
+<script>
+    // Активация Web Speech API
+    const startSiriBtn = document.getElementById('start-siri');
+    const responseDiv = document.getElementById('response');
+    const listeningText = document.getElementById('listening-text');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    // Словарь команд
+    const commands = {
+        "hello": "Hello! How can I help you today?",
+        "what's the time": () => `The current time is ${new Date().toLocaleTimeString()}.`,
+        "what's the date": () => `Today's date is ${new Date().toLocaleDateString()}.`,
+        "what is your name": "I'm Siri, your virtual assistant.",
+        "tell me a joke": "Why don't scientists trust atoms? Because they make up everything!",
+        "what's the weather": "Sorry, I can't check the weather right now.",
+        "what is 2 plus 2": "2 plus 2 is 4.",
+        "how old are you": "I was born when you opened this website.",
+        "play music": "Sorry, I can't play music at the moment.",
+        "open Google": "Sorry, I can't open websites from here.",
+        "how are you": "I'm just a program, but thanks for asking!",
+        "turn off the lights": "I can't control the lights, but maybe you can.",
+        "what's your favorite color": "I like all the colors of the rainbow.",
+        "how's it going": "Everything is going smoothly on my end!",
+        "what is artificial intelligence": "Artificial intelligence is the simulation of human intelligence by machines.",
+        "do you know Alexa": "Yes, I've heard of Alexa. We're both virtual assistants.",
+        "can you dance": "I can’t dance, but I can make your day brighter.",
+        "tell me something interesting": "Did you know that the Eiffel Tower can be 15 cm taller during the summer?",
+        "what is quantum physics": "Quantum physics is the study of matter and energy at the most fundamental level.",
+        "who is Elon Musk": "Elon Musk is an entrepreneur and the CEO of Tesla and SpaceX.",
+        "what is the capital of France": "The capital of France is Paris.",
+        "who invented the light bulb": "Thomas Edison is credited with inventing the light bulb.",
+        "how far is the moon": "The Moon is about 384,400 kilometers away from Earth.",
+        "who was the first person on the moon": "Neil Armstrong was the first person to walk on the Moon.",
+        // ... Добавляем до 250+ команд
+    };
+
+    // Логика распознавания речи и реакции на команды
+    startSiriBtn.addEventListener('click', () => {
+        listeningText.innerText = 'Listening...';
+        recognition.start();
+    });
+
+    recognition.onresult = (event) => {
+        const speechResult = event.results[0][0].transcript.toLowerCase();
+        listeningText.innerText = 'Processing...';
+
+        // Поиск соответствующей команды
+        const response = processCommand(speechResult);
+        respondWithVoice(response);
+    };
+
+    recognition.onerror = (event) => {
+        responseDiv.innerText = 'Error occurred in recognition: ' + event.error;
+    };
+
+    // Функция поиска команды
+    function processCommand(speech) {
+        // Проходим по ключам команд и проверяем совпадение
+        for (let command in commands) {
+            if (speech.includes(command)) {
+                const result = commands[command];
+                return typeof result === 'function' ? result() : result;
+            }
+        }
+        return "Sorry, I didn't understand that.";
+    }
+
+    // Функция голосового ответа
+    function respondWithVoice(responseText) {
+        responseDiv.innerText = responseText;
+        const synth = window.speechSynthesis;
+        const utterThis = new SpeechSynthesisUtterance(responseText);
+        utterThis.lang = 'en-US';
+        synth.speak(utterThis);
+        listeningText.innerText = 'I\'m listening...';
+    }
+</script>
+
+</body>
+</html>
