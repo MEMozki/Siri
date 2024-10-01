@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReZait</title>
+    <title>RezAIt</title>
     <style>
         /* Общий фон */
         body {
@@ -48,6 +48,8 @@
             align-items: center;
             position: relative;
             transition: transform 0.3s ease;
+            cursor: pointer;
+            animation: siri-waves 2s infinite;
         }
 
         /* Анимация волн */
@@ -71,7 +73,6 @@
             justify-content: center;
             align-items: center;
             transition: background-color 0.3s ease;
-            animation: siri-waves 2s infinite;
         }
 
         /* Текст "Слушаю" */
@@ -111,7 +112,7 @@
     <div class="siri-circle" id="siri-circle">
         <button class="mic-button" id="mic-button">🎤</button>
     </div>
-    <div class="listening hidden" id="listening-text">Listening...</div>
+    <div class="listening hidden" id="listening-text">Слушаю...</div>
     <div class="user-speech hidden" id="user-speech"></div>
     <div class="response" id="response"></div>
 </div>
@@ -126,34 +127,35 @@
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
+    recognition.lang = 'ru-RU'; // Устанавливаем русский язык
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    // Словарь команд
-    const commands = {
-        "hello": "Hello! How can I help you today?",
-        "what's the time": () => `The current time is ${new Date().toLocaleTimeString()}.`,
-        "what's the date": () => `Today's date is ${new Date().toLocaleDateString()}.`,
-        "what is your name": "I'm Siri, your virtual assistant.",
-        "tell me a joke": "Why don't scientists trust atoms? Because they make up everything!",
-        "what's the weather": "Sorry, I can't check the weather right now.",
-        "what is 2 plus 2": "2 plus 2 is 4.",
-        // Множество других команд
-    };
+    let isListening = false; // Для отслеживания состояния прослушивания
+
+    // API настройки
+    const apiKey = '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'; // Замените вашим API ключом
+    const apiUrl = 'https://api.proxyapi.ru/openai/v1/chat/completions'; // Замените на ваш URL API
 
     // Логика распознавания речи и реакции на команды
-    startSiriBtn.addEventListener('click', () => {
-        // Скрыть кнопку и показать "слушаю"
-        startSiriBtn.classList.add('hidden');
-        listeningText.classList.remove('hidden');
-        siriCircle.classList.add('siri-active');
-
-        responseDiv.innerText = '';  // Удаление старого ответа
-        userSpeechDiv.innerText = '';  // Очистка текста речи пользователя
-        userSpeechDiv.classList.add('hidden');  // Скрытие текста
-
-        recognition.start();
+    siriCircle.addEventListener('click', () => {
+        if (isListening) {
+            recognition.stop(); // Остановка распознавания
+            isListening = false;
+            siriCircle.classList.remove('siri-active');  // Вернуть размер круга
+            listeningText.classList.add('hidden');
+        } else {
+            isListening = true;
+            startSiriBtn.classList.add('hidden');
+            listeningText.classList.remove('hidden');
+            siriCircle.classList.add('siri-active');
+    
+            responseDiv.innerText = '';  // Удаление старого ответа
+            userSpeechDiv.innerText = '';  // Очистка текста речи пользователя
+            userSpeechDiv.classList.add('hidden');  // Скрытие текста
+    
+            recognition.start();
+        }
     });
 
     recognition.onresult = (event) => {
@@ -162,22 +164,22 @@
         userSpeechDiv.classList.remove('hidden');
 
         if (event.results[0].isFinal) {
-            listeningText.classList.add('hidden');  // Остановка отображения "Listening..."
+            listeningText.classList.add('hidden');  // Остановка отображения "Слушаю..."
             siriCircle.classList.remove('siri-active');  // Вернуть размер круга
 
-            // Поиск соответствующей команды
-            const response = processCommand(speechResult);
-            respondWithVoice(response);
+            // Запрос к API
+            getAIResponse(speechResult);
         }
     };
 
     recognition.onspeechend = () => {
         siriCircle.classList.remove('siri-active');  // Вернуть размер круга
         recognition.stop();  // Остановить распознавание
+        isListening = false;
     };
 
     recognition.onerror = (event) => {
-        responseDiv.innerText = 'Error occurred in recognition: ' + event.error;
+        responseDiv.innerText = 'Ошибка распознавания: ' + event.error;
         startSiriBtn.classList.remove('hidden');  // Показать кнопку снова
     };
 
@@ -185,23 +187,29 @@
         startSiriBtn.classList.remove('hidden');  // Показать кнопку снова
     };
 
-    // Функция поиска команды
-    function processCommand(speech) {
-        for (let command in commands) {
-            if (speech.includes(command)) {
-                const result = commands[command];
-                return typeof result === 'function' ? result() : result;
-            }
-        }
-        return "Sorry, I didn't understand that.";
+    // Функция получения ответа от ИИ через API
+    async function getAIResponse(userInput) {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}` // Используем API ключ
+            },
+            body: JSON.stringify({ prompt: userInput, max_tokens: 100 }) // Передаем текст
+        });
+
+        const data = await response.json();
+        const aiText = data.choices[0].text.trim(); // Получаем текст ответа
+
+        respondWithVoice(aiText); // Говорим ответ
+        responseDiv.innerText = aiText; // Отображаем ответ на экране
     }
 
     // Функция голосового ответа
     function respondWithVoice(responseText) {
-        responseDiv.innerText = responseText;
         const synth = window.speechSynthesis;
         const utterThis = new SpeechSynthesisUtterance(responseText);
-        utterThis.lang = 'en-US';
+        utterThis.lang = 'ru-RU'; // Устанавливаем русский язык для озвучки
         synth.speak(utterThis);
     }
 </script>
